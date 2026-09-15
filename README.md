@@ -16,6 +16,57 @@ aprueba o rechaza con un comentario.
   token. El backend solo decodifica el token (ya validado por el gateway)
   para saber de quién es cada solicitud.
 
+  ## Flujo completo
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant App as Frontend (React)
+    participant Cognito
+    participant Lambda as user-token-ms
+    participant GW as API Gateway
+    participant Backend as Backend (ECS)
+    participant RDS
+
+    Usuario->>App: 1. Clic en "Iniciar sesión"
+    App->>App: 2. Genera code_verifier y code_challenge (PKCE)
+    App->>Cognito: 3. Redirige a /authorize + code_challenge
+    Cognito->>Usuario: 4. Muestra el Hosted UI
+    Usuario->>Cognito: 5. Ingresa correo y contraseña
+
+    Note over Cognito,Lambda: 5.5 Pre Token Generation (V2_0)
+    Cognito->>Lambda: Grupo del usuario (solicitantes/aprobadores)
+    Lambda->>Lambda: Traduce grupo -> scopes,<br/>agrega el correo al claim
+    Lambda-->>Cognito: scopesToAdd + email
+
+    Cognito->>App: 6. Redirige de vuelta con ?code=...
+    App->>Cognito: 7. POST /oauth2/token (code + code_verifier)
+    Cognito->>Cognito: 8. Valida verifier contra challenge
+    Cognito->>App: 9. ID token + access token<br/>(access token trae scope y email)
+
+    Usuario->>App: 10. Crear / ver / decidir una solicitud
+    App->>GW: 11. Petición + Authorization: Bearer access_token
+
+    Note over GW: JWT Authorizer: firma, issuer,<br/>expiración y scope de la ruta
+    alt Token inválido o sin el scope
+        GW-->>App: 401 o 403
+    else Autorizado
+        GW->>Backend: 12. Reenvía la petición (sin validar nada más)
+        Backend->>Backend: Decodifica el token (ya validado)<br/>para saber quién es y su rol
+        Backend->>RDS: 13. Consulta o escribe la solicitud
+        RDS-->>Backend: 14. Resultado
+        Backend-->>GW: 15. Respuesta
+        GW-->>App: 16. Respuesta
+    end
+    App-->>Usuario: 17. Muestra el resultado
+```
+
+Los pasos 1 a 9 son el login (Authorization Code + PKCE, RFC 7636); nunca
+tocan el backend. El paso 5.5 es lo que hace que la autorización dependa de
+la *persona*, no solo del cliente: sin él, todos los usuarios autenticados
+recibirían los mismos scopes. Del paso 10 en adelante es el uso normal de la
+aplicación — cada petición es independiente y lleva su propio token.
+
 ## Cómo funciona la autorización
 
 1. Cada usuario pertenece a un grupo de Cognito: `solicitantes` o
