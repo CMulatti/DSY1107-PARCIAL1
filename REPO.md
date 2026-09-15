@@ -1,33 +1,35 @@
-# Estructura del repositorio — DSY1107 · EA1
+# Estructura del repositorio — DSY1107-PARCIAL1 · EA1
 
-Este documento define **cómo se organiza el repositorio de la Experiencia de Aprendizaje 1**. Respetar esta estructura
-no es un capricho de orden: los pipelines de GitHub Actions buscan las carpetas por su nombre exacto. Si mueves o
-renombras una, el pipeline deja de compilar.
-
-## Estructura
+Este documento define **cómo se organiza el repositorio de la Evaluación PArcial 1 correspondiente a la experiencia de Aprendizaje 1**. 
 
 ```
 /
 ├── .github/
-│   └── workflows/          # pipelines de GitHub Actions (ver más abajo)
-├── backend/                # API REST en Spring Boot (Java 21, Maven)
-│   ├── src/main/java/      # código
-│   ├── src/test/java/      # pruebas
-│   ├── Dockerfile          # imagen que se publica en ECS
-│   └── pom.xml             # dependencias y build
-├── frontend/               # SPA en Angular o React
-│   ├── src/                # código
-│   ├── public/             # estáticos; aquí se escribe config.json en despliegue
-│   └── package.json        # dependencias y scripts npm
-├── terraform/              # infraestructura como código (AWS)
-│   ├── cognito.tf          # IDaaS: user pool, cliente, dominio
-│   ├── apigateway.tf       # API Manager: rutas y autorizador JWT
-│   ├── amplify.tf          # hosting del frontend
-│   ├── variables.tf        # entradas parametrizables
-│   └── outputs.tf          # datos que consume el frontend (ids, URLs)
-├── scripts/                # automatización del despliegue
+│   └── workflows/         
+├── backend/                
+│   ├── src/main/java/      
+│   ├── src/main/resources/ 
+│   ├── src/test/java/      
+│   ├── Dockerfile          
+│   └── pom.xml             
+├── frontend/               
+│   ├── src/                 
+│   ├── public/              
+│   └── package.json          
+├── user-token-ms/            
+│   └── index.mjs
+├── terraform/                
+│   ├── cognito.tf            # IDaaS: user pool, dominio, resource server, grupos (solicitantes/aprobadores)
+│   ├── main.tf                # API Manager: API Gateway, rutas, autorizador JWT
+│   ├── amplify.tf             
+│   ├── ecs.tf                 
+│   ├── rds.tf                 # base de datos PostgreSQL
+│   ├── lambda.tf               # despliegue de user-token-ms
+│   ├── variables.tf            
+│   └── (outputs junto a cada recurso, no en un archivo separado)
+├── scripts/                    # automatización del despliegue (config-frontend.sh, publicar-amplify.sh, publicar-ecs.sh)
 ├── .gitignore
-└── README.md               # qué hace tu solución y cómo levantarla
+└── README.md                
 ```
 
 Las carpetas `backend`, `frontend` y `terraform` son **obligatorias**. Si una parte no la alcanzaste a desarrollar, deja
@@ -62,30 +64,6 @@ Hay que crear estos tres:
 así que hay que **actualizar los tres secretos** al empezar a trabajar. Si un pipeline de despliegue falla con un error
 de autenticación o de token expirado, esta es la causa en la mayoría de los casos.
 
-## Rama de trabajo
-
-**Todo el trabajo va en `main`.** Es la rama que disparan los pipelines y la única que se revisa al evaluar: si lo que
-hiciste no está en `main`, la evaluación ve un repositorio vacío y las insignias no marcan nada, aunque el código exista
-en otra rama.
-
-Puedes usar ramas de apoyo mientras desarrollas, pero **antes del cierre de la entrega todo debe estar integrado en
-`main`**. No se revisan ramas sueltas, ni Pull Requests sin fusionar.
-
-Si tu repositorio quedó con la rama `master` —pasa cuando se crea con una configuración antigua de git— renómbrala:
-
-```bash
-git branch -m master main          # renombra la rama local
-git push -u origin main            # publica main y la deja como upstream
-```
-
-Luego, en GitHub: `Settings` → `General` → `Default branch`, cambia la rama predeterminada a `main`. Recién ahí puedes
-borrar la antigua, porque GitHub no deja eliminar la rama predeterminada:
-
-```bash
-git push origin --delete master
-```
-
-Verifica en qué rama estás con `git branch --show-current`.
 
 ## Pipelines
 
