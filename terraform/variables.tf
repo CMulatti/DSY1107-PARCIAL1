@@ -1,7 +1,7 @@
 variable "estudiante" {
   description = "Tu apellido en minúsculas. Hace únicos varios recursos."
   type        = string
-  default     = "grupoxx-mulatti"
+  default     = "grupoxx-mulatti-parcial1"
 }
 
 variable "aws_region" {

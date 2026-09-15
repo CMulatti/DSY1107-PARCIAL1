@@ -5,15 +5,15 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * CORS para el modo local (actividad 1.1.4).
+ * CORS para el modo local.
  *
- * Cuando el front pasa por el API Gateway, el CORS lo resuelve alla el
- * cors_configuration de apigateway.tf y estas reglas ni se consultan: el
- * navegador nunca habla con este servicio. Esto existe para poder apuntar
- * "ng serve" directamente al :8080 y comparar las dos rutas.
+ * Cuando el front pasa por el API Gateway, el CORS lo resuelve allá el
+ * cors_configuration de main.tf y estas reglas ni se consultan: el
+ * navegador nunca habla con este servicio directamente. Esto existe para
+ * poder apuntar "npm run dev" directamente al :8080.
  *
- * Ojo con el detalle que se repite en toda la EA1: el origen va SIN barra
- * final, porque un header Origin nunca la lleva.
+ * Ojo con el detalle: el origen va SIN barra final, porque un header
+ * Origin nunca la lleva.
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -28,11 +28,8 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(props.cors().origenes().toArray(String[]::new))
-                .allowedMethods("GET", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("authorization", "content-type")
-                // Sin esto el JavaScript del front puede recibir la respuesta pero
-                // no leer X-Cache: los headers no estandar no se exponen solos.
-                .exposedHeaders("X-Cache", "X-Cache-Edad")
                 .maxAge(300);
     }
 }

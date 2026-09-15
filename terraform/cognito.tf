@@ -1,7 +1,7 @@
 # El user pool es el "tenant" de la guía 1.2.3: el directorio donde viven los
 # usuarios y, a la vez, el servidor de autorización que emite los tokens.
 resource "aws_cognito_user_pool" "pool" {
-  name = "dsy1107-grupoXX"
+  name = "dsy1107-vacaciones"
 
   user_pool_tier = "ESSENTIALS"
 
@@ -32,7 +32,7 @@ resource "aws_cognito_user_pool" "pool" {
 }
 
 resource "aws_cognito_user_pool_domain" "hosted_ui" {
-  domain       = "dsy1107-grupoxx"
+  domain       = "dsy1107-vacaciones"
   user_pool_id = aws_cognito_user_pool.pool.id
 
   # 1 = Hosted UI clásica. La versión 2 (Managed Login) exige definir un
@@ -92,43 +92,67 @@ resource "aws_cognito_user" "demo" {
   message_action = "SUPPRESS"
 }
 
+#usuario aprobador (employer side)
+resource "aws_cognito_user" "demo_aprobador" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username     = "aprobador@duoc.cl"
+  password     = "Duoc2026"
 
-//added in 1.3.11 Creando scopes en Cognito para autorizar APIs en API GT
+  attributes = {
+    email          = "aprobador@duoc.cl"
+    email_verified = true
+    name           = "Aprobador Demo"
+  }
+
+  message_action = "SUPPRESS"
+}
+
+resource "aws_cognito_user_in_group" "demo_aprobador" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  group_name   = aws_cognito_user_group.aprobadores.name
+  username     = aws_cognito_user.demo_aprobador.username
+}
+
+
 # -----------------------------------------------------------------------------
 # El resource server: declara que los scopes EXISTEN. No los concede a nadie.
 # -----------------------------------------------------------------------------
-resource "aws_cognito_resource_server" "productos" {
-  identifier   = "productos"
-  name         = "API de productos"
+resource "aws_cognito_resource_server" "solicitudes" {
+  identifier   = "solicitudes"
+  name         = "API de solicitudes"
   user_pool_id = aws_cognito_user_pool.pool.id
 
   scope {
     scope_name        = "read"
-    scope_description = "Consultar productos"
+    scope_description = "Consultar solicitudes"
   }
   scope {
     scope_name        = "write"
-    scope_description = "Crear y eliminar"
+    scope_description = "Crear, editar y eliminar solicitudes propias"
+  }
+    scope {
+    scope_name        = "aprobar"
+    scope_description = "Aprobar o rechazar solicitudes"
   }
 }
 
 # -----------------------------------------------------------------------------
 # Los grupos: aqui vive el permiso de cada persona.
 # -----------------------------------------------------------------------------
-resource "aws_cognito_user_group" "lectores" {
-  name         = "lectores"
+resource "aws_cognito_user_group" "solicitantes" {
+  name         = "solicitantes"
   user_pool_id = aws_cognito_user_pool.pool.id
-  description  = "Puede consultar productos"
+  description  = "Puede crear y gestionar sus propias solicitudes"
 }
 
-resource "aws_cognito_user_group" "editores" {
-  name         = "editores"
+resource "aws_cognito_user_group" "aprobadores" {
+  name         = "aprobadores"
   user_pool_id = aws_cognito_user_pool.pool.id
-  description  = "Puede crear, modificar y eliminar productos"
+  description  = "Puede aprobar o rechazar solicitudes"
 }
 
-resource "aws_cognito_user_in_group" "demo_lector" {
+resource "aws_cognito_user_in_group" "demo_solicitante" {
   user_pool_id = aws_cognito_user_pool.pool.id
-  group_name   = aws_cognito_user_group.lectores.name
+  group_name   = aws_cognito_user_group.solicitantes.name
   username     = aws_cognito_user.demo.username
 }

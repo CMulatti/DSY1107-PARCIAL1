@@ -1,15 +1,20 @@
-import {useEffect, useState} from 'react'
-import {login, logout, procesarRetorno, getTokens, getIdToken, getAccessToken, decodificarJwt, estaExpirado} from './auth.js'
-import {obtenerUserInfo, obtenerUsuarioCognito, obtenerIndicadores, obtenerIndicadoresPublicos} from './api.js'
-import {getConfig} from './config.js'
-
-const CLAVES_REQUERIDAS = ['region', 'cognitoDomain', 'clientId', 'redirectUri', 'apiUrl']
+import { useEffect, useState } from 'react'
+import { login, logout, procesarRetorno, getTokens, getAccessToken, decodificarJwt, estaExpirado } from './auth.js'
+import {
+  listarSolicitudes,
+  crearSolicitud,
+  actualizarSolicitud,
+  eliminarSolicitud,
+  decidirSolicitud,
+} from './api.js'
 
 export default function App() {
   const [tokens, setTokens] = useState(getTokens())
   const [error, setError] = useState(null)
-  const [resultado, setResultado] = useState(null)
+  const [solicitudes, setSolicitudes] = useState([])
   const [cargando, setCargando] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [form, setForm] = useState({ fechaInicio: '', fechaFin: '', motivo: '' })
 
   useEffect(() => {
     procesarRetorno()
@@ -17,64 +22,145 @@ export default function App() {
       .catch((e) => setError(e.message))
   }, [])
 
-  const config = getConfig()
-  const faltantes = config
-    ? CLAVES_REQUERIDAS.filter((clave) => !config[clave])
-    : ['config.json no se pudo cargar']
-
-  const idClaims = decodificarJwt(getIdToken())
   const accessClaims = decodificarJwt(getAccessToken())
   const sesionActiva = Boolean(tokens) && !estaExpirado(getAccessToken())
+  const esAprobador = accessClaims?.['cognito:groups']?.includes('aprobadores') ?? false
 
-  async function llamar(fn) {
+  async function cargar() {
     setCargando(true)
-    setResultado(await fn())
+    const resultado = await listarSolicitudes()
+    if (resultado.ok) {
+      setSolicitudes(resultado.cuerpo)
+    } else {
+      setError(`${resultado.status}: ${JSON.stringify(resultado.cuerpo)}`)
+    }
     setCargando(false)
+  }
+
+  useEffect(() => {
+    if (sesionActiva) cargar()
+  }, [sesionActiva])
+
+  async function enviarFormulario(e) {
+    e.preventDefault()
+    setError(null)
+    const resultado = editando
+      ? await actualizarSolicitud(editando, form)
+      : await crearSolicitud(form)
+
+    if (resultado.ok) {
+      setForm({ fechaInicio: '', fechaFin: '', motivo: '' })
+      setEditando(null)
+      cargar()
+    } else {
+      setError(`${resultado.status}: ${JSON.stringify(resultado.cuerpo)}`)
+    }
+  }
+
+  function empezarEdicion(s) {
+    setEditando(s.id)
+    setForm({ fechaInicio: s.fechaInicio, fechaFin: s.fechaFin, motivo: s.motivo })
+  }
+
+  async function eliminar(id) {
+    const resultado = await eliminarSolicitud(id)
+    if (resultado.ok) cargar()
+    else setError(`${resultado.status}: ${JSON.stringify(resultado.cuerpo)}`)
+  }
+
+  async function decidir(id, estado) {
+    const comentario = window.prompt(
+      estado === 'APROBADA' ? 'Comentario de aprobación:' : 'Motivo del rechazo:'
+    )
+    if (!comentario) return
+    const resultado = await decidirSolicitud(id, { estado, comentario })
+    if (resultado.ok) cargar()
+    else setError(`${resultado.status}: ${JSON.stringify(resultado.cuerpo)}`)
   }
 
   return (
     <main>
-      <h1>DSY1107 · Identidad con Cognito</h1>
+      <h1>Solicitudes de Vacaciones</h1>
       {error && <p className="error">{error}</p>}
 
-      {faltantes.length > 0 ? (
-        <p>Falta configurar: {faltantes.join(', ')}</p>
-      ) : tokens ? (
-        <p>Sesión iniciada.</p>
-      ) : (
+      {!sesionActiva ? (
         <button onClick={login}>Iniciar sesión con Cognito</button>
-      )}
-
-      {sesionActiva && (
+      ) : (
         <>
-          <details open>
-            <summary>ID Token · claims</summary>
-            <pre>{JSON.stringify(idClaims, null, 2)}</pre>
-          </details>
-          <details>
-            <summary>Access Token · claims</summary>
-            <pre>{JSON.stringify(accessClaims, null, 2)}</pre>
-          </details>
+          <p>
+            Sesión iniciada como <strong>{accessClaims?.email}</strong>
+            {' '}({esAprobador ? 'aprobador' : 'solicitante'})
+            {' '}<button onClick={logout}>Cerrar sesión</button>
+          </p>
 
-          <div className="botones">
-            <button onClick={() => llamar(obtenerUserInfo)}>/oauth2/userInfo</button>
-            <button onClick={() => llamar(obtenerUsuarioCognito)}>Cognito GetUser</button>
-            <button onClick={() => llamar(() => obtenerIndicadores(true))}>/datos con token</button>
-            <button className="peligro" onClick={() => llamar(() => obtenerIndicadores(false))}>
-              /datos sin token
-            </button>
-            <button onClick={() => llamar(obtenerIndicadoresPublicos)}>/publico/datos</button>
-          </div>
-
-          <button onClick={logout}>Cerrar sesión</button>
-
-          {cargando && <p>Llamando…</p>}
-          {resultado && !cargando && (
-            <div className={resultado.ok ? 'resultado ok' : 'resultado falla'}>
-              <p><strong>{resultado.descripcion}</strong> → HTTP {resultado.status || 'sin respuesta'}</p>
-              <pre>{JSON.stringify(resultado.cuerpo, null, 2)}</pre>
-            </div>
+          {!esAprobador && (
+            <section>
+              <h2>{editando ? `Editar solicitud #${editando}` : 'Nueva solicitud'}</h2>
+              <form onSubmit={enviarFormulario}>
+                <label>
+                  Fecha inicio:
+                  <input
+                    type="date"
+                    value={form.fechaInicio}
+                    onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Fecha fin:
+                  <input
+                    type="date"
+                    value={form.fechaFin}
+                    onChange={(e) => setForm({ ...form, fechaFin: e.target.value })}
+                    required
+                  />
+                </label>
+                <label>
+                  Motivo:
+                  <input
+                    type="text"
+                    value={form.motivo}
+                    onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+                    required
+                  />
+                </label>
+                <button type="submit">{editando ? 'Guardar' : 'Crear'}</button>
+                {editando && (
+                  <button type="button" onClick={() => { setEditando(null); setForm({ fechaInicio: '', fechaFin: '', motivo: '' }) }}>
+                    Cancelar
+                  </button>
+                )}
+              </form>
+            </section>
           )}
+
+          <section>
+            <h2>{esAprobador ? 'Todas las solicitudes' : 'Mis solicitudes'}</h2>
+            {cargando && <p>Cargando…</p>}
+            <ul>
+              {solicitudes.map((s) => (
+                <li key={s.id}>
+                  <strong>#{s.id}</strong> — {s.solicitanteEmail} — {s.fechaInicio} a {s.fechaFin}
+                  {' '}— {s.motivo} — <em>{s.estado}</em>
+                  {s.comentarioAprobador && <p>Comentario: {s.comentarioAprobador}</p>}
+
+                  {!esAprobador && s.estado === 'PENDIENTE' && (
+                    <>
+                      {' '}<button onClick={() => empezarEdicion(s)}>Editar</button>
+                      {' '}<button onClick={() => eliminar(s.id)}>Eliminar</button>
+                    </>
+                  )}
+
+                  {esAprobador && s.estado === 'PENDIENTE' && (
+                    <>
+                      {' '}<button onClick={() => decidir(s.id, 'APROBADA')}>Aprobar</button>
+                      {' '}<button onClick={() => decidir(s.id, 'RECHAZADA')}>Rechazar</button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         </>
       )}
     </main>

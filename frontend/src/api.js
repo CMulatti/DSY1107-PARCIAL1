@@ -18,49 +18,74 @@ async function ejecutar(descripcion, promesa) {
   }
 }
 
-/** 1. El endpoint estándar de OIDC: la identidad según el estándar. */
-export function obtenerUserInfo() {
-  const { cognitoDomain } = getConfig()
+function headersConToken(extra = {}) {
+  return {
+    Authorization: `Bearer ${getAccessToken()}`,
+    ...extra,
+  }
+}
+
+/** Lista: el solicitante ve las suyas, el aprobador ve todas. El backend decide según el token. */
+export function listarSolicitudes() {
+  const { apiUrl } = getConfig()
   return ejecutar(
-    'GET /oauth2/userInfo (OIDC)',
-    fetch(`${cognitoDomain}/oauth2/userInfo`, {
-      headers: {Authorization: `Bearer ${getAccessToken()}`},
-    })
+    'GET /solicitudes',
+    fetch(`${apiUrl}/solicitudes`, { headers: headersConToken() })
   )
 }
 
-/** 2. La API propietaria de AWS. El token va en el cuerpo, no en el header. */
-export function obtenerUsuarioCognito() {
-  const { region } = getConfig()
+export function obtenerSolicitud(id) {
+  const { apiUrl } = getConfig()
   return ejecutar(
-    'POST cognito-idp GetUser (API de AWS)',
-    fetch(`https://cognito-idp.${region}.amazonaws.com/`, {
+    `GET /solicitudes/${id}`,
+    fetch(`${apiUrl}/solicitudes/${id}`, { headers: headersConToken() })
+  )
+}
+
+export function crearSolicitud({ fechaInicio, fechaFin, motivo }) {
+  const { apiUrl } = getConfig()
+  return ejecutar(
+    'POST /solicitudes',
+    fetch(`${apiUrl}/solicitudes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': 'AWSCognitoIdentityProviderService.GetUser',
-      },
-      body: JSON.stringify({AccessToken: getAccessToken()}),
+      headers: headersConToken({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ fechaInicio, fechaFin, motivo }),
     })
   )
 }
 
-/** 3. La API de la actividad 1.1.2, ahora detrás del authorizer. */
-export function obtenerIndicadores(conToken = true) {
+export function actualizarSolicitud(id, { fechaInicio, fechaFin, motivo }) {
   const { apiUrl } = getConfig()
   return ejecutar(
-    conToken ? 'GET /datos con token' : 'GET /datos SIN token',
-    fetch(`${apiUrl}/datos`, {
-      headers: conToken ? {Authorization: `Bearer ${getAccessToken()}`} : {},
+    `PUT /solicitudes/${id}`,
+    fetch(`${apiUrl}/solicitudes/${id}`, {
+      method: 'PUT',
+      headers: headersConToken({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ fechaInicio, fechaFin, motivo }),
     })
   )
 }
 
-/** La ruta gemela sin authorizer, solo para comparar. */
-export function obtenerIndicadoresPublicos() {
+export function eliminarSolicitud(id) {
   const { apiUrl } = getConfig()
   return ejecutar(
-    'GET /publico/datos (ruta sin proteger)',
-    fetch(`${apiUrl}/publico/datos`)
+    `DELETE /solicitudes/${id}`,
+    fetch(`${apiUrl}/solicitudes/${id}`, {
+      method: 'DELETE',
+      headers: headersConToken(),
+    })
+  )
+}
+
+/** Solo un aprobador puede llamar esto; si no tiene el scope, el API Gateway responde 403. */
+export function decidirSolicitud(id, { estado, comentario }) {
+  const { apiUrl } = getConfig()
+  return ejecutar(
+    `PUT /solicitudes/${id}/decision`,
+    fetch(`${apiUrl}/solicitudes/${id}/decision`, {
+      method: 'PUT',
+      headers: headersConToken({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ estado, comentario }),
+    })
   )
 }

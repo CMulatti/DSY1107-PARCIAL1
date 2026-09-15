@@ -40,13 +40,6 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- En Spring Boot 4 el RestClient.Builder autoconfigurado ya no viene
-             dentro de starter-web: vive en su propio modulo. Es el cliente con
-             el que se llama a mindicador.cl. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-restclient</artifactId>
-		</dependency>
 
 		<!-- Solo genera el autocompletado de application.yml para las propiedades
              backend.*. No viaja en el jar final. -->
@@ -128,7 +121,7 @@
 
 		<!-- La base de las pruebas: en memoria, una por ejecucion. Las pruebas
              no tocan el RDS ni necesitan Docker, y aun asi corren la migracion
-             de verdad, porque V1__producto.sql esta escrita en SQL portable. -->
+             de verdad, porque V1__solicitud.sql esta escrita en SQL portable. -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
