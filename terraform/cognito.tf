@@ -78,6 +78,7 @@ resource "aws_cognito_user_pool_client" "spa" {
 #un usuario de prueba, ya confirmado y con contraseña definitiva
 # sin esto habría que crearlo a mano en la consola antes de cada demo
 
+#usuario solicitante 1 (employee side)
 resource "aws_cognito_user" "demo" {
   user_pool_id = aws_cognito_user_pool.pool.id
   username     = "test@duoc.cl"
@@ -91,6 +92,23 @@ resource "aws_cognito_user" "demo" {
   #No enviar correo de invitación: el usuario es ficticio
   message_action = "SUPPRESS"
 }
+
+#usuario solicitante 2 (employee side)
+resource "aws_cognito_user" "demo_solicitante2" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username     = "solicitante@duoc.cl"
+  password     = "Duoc2026"
+
+  attributes = {
+    email          = "solicitante@duoc.cl"
+    email_verified = true
+    name           = "Solicitante Demo 2"
+  }
+
+  message_action = "SUPPRESS"
+}
+
+
 
 #usuario aprobador (employer side)
 resource "aws_cognito_user" "demo_aprobador" {
@@ -155,4 +173,10 @@ resource "aws_cognito_user_in_group" "demo_solicitante" {
   user_pool_id = aws_cognito_user_pool.pool.id
   group_name   = aws_cognito_user_group.solicitantes.name
   username     = aws_cognito_user.demo.username
+}
+
+resource "aws_cognito_user_in_group" "demo_solicitante2" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  group_name   = aws_cognito_user_group.solicitantes.name
+  username     = aws_cognito_user.demo_solicitante2.username
 }

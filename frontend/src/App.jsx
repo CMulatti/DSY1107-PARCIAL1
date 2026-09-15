@@ -124,7 +124,7 @@ export default function App() {
                     required
                   />
                 </label>
-                <button type="submit">{editando ? 'Guardar' : 'Crear'}</button>
+                <button type="submit" className={editando ? '' : 'crear'}>{editando ? 'Guardar' : 'Crear'}</button>
                 {editando && (
                   <button type="button" onClick={() => { setEditando(null); setForm({ fechaInicio: '', fechaFin: '', motivo: '' }) }}>
                     Cancelar
@@ -153,10 +153,11 @@ export default function App() {
 
                   {esAprobador && s.estado === 'PENDIENTE' && (
                     <>
-                      {' '}<button onClick={() => decidir(s.id, 'APROBADA')}>Aprobar</button>
-                      {' '}<button onClick={() => decidir(s.id, 'RECHAZADA')}>Rechazar</button>
+                      {' '}<button className="aprobar" onClick={() => decidir(s.id, 'APROBADA')}>Aprobar</button>
+                      {' '}<button className="rechazar" onClick={() => decidir(s.id, 'RECHAZADA')}>Rechazar</button>
                     </>
                   )}
+                  
                 </li>
               ))}
             </ul>

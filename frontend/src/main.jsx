@@ -6,6 +6,7 @@ createRoot(document.getElementById("root")).render(<App />);*/
 import { createRoot } from "react-dom/client"
 import App from "./App"
 import { cargarConfig } from "./config.js"
+import "./index.css"
 
 cargarConfig().then(() => {
   createRoot(document.getElementById("root")).render(<App />)
