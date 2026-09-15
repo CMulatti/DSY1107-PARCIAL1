@@ -116,7 +116,7 @@ jobs:
             "userName": "smoke-test",
             "request": {
               "userAttributes": { "email": "smoke@ci" },
-              "groupConfiguration": { "groupsToOverride": ["editores"] }
+              "groupConfiguration": { "groupsToOverride": ["aprobadores"] }
             },
             "response": {}
           }
@@ -131,7 +131,7 @@ jobs:
           scopes=$(jq -c '.response.claimsAndScopeOverrideDetails.accessTokenGeneration.scopesToAdd' salida.json)
           echo "scopes de un editor: $scopes"
 
-          if [ "$scopes" != '["productos/read","productos/write"]' ]; then
+          if [ "$scopes" != '["solicitudes/read","solicitudes/aprobar"]' ]; then
             echo "::error::El Lambda desplegado no concede los scopes esperados: $scopes"
             jq . salida.json
             exit 1
@@ -140,5 +140,5 @@ jobs:
           {
             echo "### user-token-ms desplegado"
             echo ""
-            echo "Un usuario del grupo \`editores\` recibe: \`${scopes}\`"
+            echo "Un usuario del grupo \`aprobadores\` recibe: \`${scopes}\`"
           } >> "$GITHUB_STEP_SUMMARY"
