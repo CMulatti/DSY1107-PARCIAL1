@@ -59,6 +59,14 @@ spring:
     # arrancar. Crea la tabla "solicitud" la primera vez que corre.
     enabled: true
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_DNST65Syk
+
+
+
 server:
   port: 8080
   # Sin esto, un error devuelve la pagina de error de Spring. Con esto, el JSON
@@ -66,6 +74,7 @@ server:
   error:
     include-message: always
     include-stacktrace: never
+
 
 backend:
   cors:
