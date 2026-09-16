@@ -11,10 +11,7 @@ aprueba o rechaza con un comentario.
 - Un **aprobador** inicia sesión con otra cuenta, ve todas las solicitudes
   pendientes de todos los solicitantes, y aprueba o rechaza cada una con un
   comentario obligatorio.
-- El backend nunca valida el token ni consulta permisos: el API Gateway
-  decide quién puede llamar a cada ruta, según el scope que trae el access
-  token. El backend solo decodifica el token (ya validado por el gateway)
-  para saber de quién es cada solicitud.
+- La autorización real, quién puede llamar a cada ruta, según el scope que trae el access token la decide el API Gateway, no el backend: el backend no contiene ningún if de permisos. El backend sí valida que el token sea auténtico (firma, issuer y expiración, vía spring-boot-starter-oauth2-resource-server), como una segunda capa de defensa en caso de que alguien alcance el puerto 8080 saltándose el gateway; pero esa validación nunca decide qué puede hacer el usuario, solo si el token es legítimo. Para saber de quién es cada solicitud, el backend lee el claim email del mismo token ya validado.
 
   ## Flujo completo
 
