@@ -48,8 +48,10 @@ sequenceDiagram
     alt Token inválido o sin el scope
         GW-->>App: 401 o 403
     else Autorizado
-        GW->>Backend: 12. Reenvía la petición (sin validar nada más)
+        GW->>Backend: 12. Reenvía la petición 
         Backend->>Backend: Decodifica el token (ya validado)<br/>para saber quién es y su rol
+        Note over Backend: Spring Security valida de nuevo<br/>firma, issuer y expiración<br/>(defensa en profundidad)
+        Backend->>Backend: Lee el claim email<br/>para saber quién es y su rol
         Backend->>RDS: 13. Consulta o escribe la solicitud
         RDS-->>Backend: 14. Resultado
         Backend-->>GW: 15. Respuesta
